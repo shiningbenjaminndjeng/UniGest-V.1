@@ -15,7 +15,7 @@ import Evenements from './pages/Evenements';
 import Notes from './pages/Notes';
 import Discussion from './pages/Discussion';
 import Explorer from './pages/Explorer';
-import Profil from './pages/Profil';
+import Profil from './pages/Profils';   // ← votre fichier s'appelle Profils.jsx
 
 // Layout
 import Layout from './components/Layout';
@@ -36,21 +36,21 @@ function AppRoutes() {
   return (
     <Routes>
       {/* Routes publiques */}
-      <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
+      <Route path="/login"    element={<PublicRoute><Login /></PublicRoute>} />
       <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
-      <Route path="/" element={<Navigate to="/login" replace />} />
+      <Route path="/"         element={<Navigate to="/login" replace />} />
 
       {/* Routes protégées avec layout */}
       <Route path="/" element={<PrivateRoute><Layout /></PrivateRoute>}>
-        <Route path="dashboard" element={<Dashboard />} />
-        <Route path="etudiants" element={<Etudiants />} />
-        <Route path="cours" element={<Cours />} />
+        <Route path="dashboard"  element={<Dashboard />} />
+        <Route path="etudiants"  element={<Etudiants />} />
+        <Route path="cours"      element={<Cours />} />
         <Route path="professeurs" element={<Professeurs />} />
         <Route path="evenements" element={<Evenements />} />
-        <Route path="notes" element={<Notes />} />
+        <Route path="notes"      element={<Notes />} />
         <Route path="discussion" element={<Discussion />} />
-        <Route path="explorer" element={<Explorer />} />
-        <Route path="profil" element={<Profil />} />
+        <Route path="explorer"   element={<Explorer />} />
+        <Route path="profil"     element={<Profil />} />
       </Route>
 
       {/* 404 */}

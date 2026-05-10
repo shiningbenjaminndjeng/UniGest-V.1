@@ -37,6 +37,7 @@
 }
 
 @layer components {
+  /* ── card ─────────────────────────────────── */
   .card {
     @apply rounded-2xl border;
     background: var(--c-surface);
@@ -45,21 +46,36 @@
   }
 
   .card-hover {
-    @apply card transition-all duration-300 hover:scale-[1.01];
-    &:hover { border-color: var(--c-primary); box-shadow: 0 0 20px var(--c-primary-glow); }
+    @apply rounded-2xl border transition-all duration-300;
+    background: var(--c-surface);
+    border-color: var(--c-border);
+    padding: 1.5rem;
+  }
+  .card-hover:hover {
+    transform: scale(1.005);
+    border-color: var(--c-primary);
+    box-shadow: 0 0 20px var(--c-primary-glow);
   }
 
+  /* ── buttons ──────────────────────────────── */
   .btn-primary {
     @apply px-5 py-2.5 rounded-xl font-semibold text-white transition-all duration-200 text-sm;
     background: var(--c-primary);
-    &:hover { filter: brightness(1.1); transform: translateY(-1px); }
-    &:active { transform: translateY(0); }
+  }
+  .btn-primary:hover {
+    filter: brightness(1.1);
+    transform: translateY(-1px);
+  }
+  .btn-primary:active {
+    transform: translateY(0);
   }
 
   .btn-danger {
     @apply px-5 py-2.5 rounded-xl font-semibold text-white transition-all duration-200 text-sm;
     background: var(--c-danger);
-    &:hover { filter: brightness(1.1); }
+  }
+  .btn-danger:hover {
+    filter: brightness(1.1);
   }
 
   .btn-outline {
@@ -67,65 +83,92 @@
     color: var(--c-text);
     border-color: var(--c-border);
     background: transparent;
-    &:hover { border-color: var(--c-primary); color: var(--c-primary); }
+  }
+  .btn-outline:hover {
+    border-color: var(--c-primary);
+    color: var(--c-primary);
   }
 
+  /* ── inputs ───────────────────────────────── */
   .input {
     @apply w-full px-4 py-3 rounded-xl text-sm outline-none transition-all duration-200;
     background: var(--c-surface2);
     border: 1.5px solid var(--c-border);
     color: var(--c-text);
-    &::placeholder { color: var(--c-text-muted); }
-    &:focus { border-color: var(--c-primary); box-shadow: 0 0 0 3px var(--c-primary-glow); }
+  }
+  .input::placeholder {
+    color: var(--c-text-muted);
+  }
+  .input:focus {
+    border-color: var(--c-primary);
+    box-shadow: 0 0 0 3px var(--c-primary-glow);
   }
 
   .select {
-    @apply input appearance-none cursor-pointer;
+    @apply w-full px-4 py-3 rounded-xl text-sm outline-none transition-all duration-200 appearance-none cursor-pointer;
+    background: var(--c-surface2);
+    border: 1.5px solid var(--c-border);
+    color: var(--c-text);
+  }
+  .select::placeholder {
+    color: var(--c-text-muted);
+  }
+  .select:focus {
+    border-color: var(--c-primary);
+    box-shadow: 0 0 0 3px var(--c-primary-glow);
   }
 
+  /* ── badges ───────────────────────────────── */
   .badge {
     @apply px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wide;
   }
-
   .badge-etudiant { background: rgba(59,130,246,0.15); color: #60a5fa; }
-  .badge-delegue { background: rgba(167,139,250,0.15); color: var(--c-delegue); }
-  .badge-prof { background: rgba(52,211,153,0.15); color: var(--c-prof); }
+  .badge-delegue  { background: rgba(167,139,250,0.15); color: var(--c-delegue); }
+  .badge-prof     { background: rgba(52,211,153,0.15);  color: var(--c-prof); }
 
+  /* ── sidebar ──────────────────────────────── */
   .sidebar-link {
     @apply flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 text-sm font-medium;
     color: var(--c-text-muted);
-    &:hover { background: var(--c-surface2); color: var(--c-text); }
-    &.active { background: rgba(91,115,255,0.15); color: var(--c-primary); }
+  }
+  .sidebar-link:hover {
+    background: var(--c-surface2);
+    color: var(--c-text);
+  }
+  .sidebar-link.active {
+    background: rgba(91,115,255,0.15);
+    color: var(--c-primary);
   }
 
+  /* ── tabs ─────────────────────────────────── */
   .tab {
     @apply px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer;
     color: var(--c-text-muted);
-    &:hover { color: var(--c-text); }
-    &.active { background: var(--c-primary); color: white; }
+  }
+  .tab:hover {
+    color: var(--c-text);
+  }
+  .tab.active {
+    background: var(--c-primary);
+    color: white;
   }
 }
 
-/* Scrollbar personnalisée */
+/* ── Scrollbar ──────────────────────────────── */
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: var(--c-bg); }
 ::-webkit-scrollbar-thumb { background: var(--c-border); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--c-primary); }
 
-/* Animations */
+/* ── Animations ─────────────────────────────── */
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 .fade-in { animation: fadeIn 0.35s ease forwards; }
 
-@keyframes slideIn {
-  from { transform: translateX(-100%); }
-  to { transform: translateX(0); }
-}
-
 @keyframes pulse-glow {
-  0%, 100% { box-shadow: 0 0 5px var(--c-primary-glow); }
-  50% { box-shadow: 0 0 20px var(--c-primary-glow); }
+  0%, 100% { box-shadow: 0 0 5px  var(--c-primary-glow); }
+  50%       { box-shadow: 0 0 20px var(--c-primary-glow); }
 }
 .pulse-glow { animation: pulse-glow 2s infinite; }
