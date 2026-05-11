@@ -40,16 +40,19 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 // ============================================
 // ROUTES API
 // ============================================
-app.use('/api/auth',        require('./routes/auth'));
-app.use('/api/facultes',    require('./routes/facultes'));
-app.use('/api/filieres',    require('./routes/filieres'));
-app.use('/api/etudiants',   require('./routes/etudiants'));
-app.use('/api/ues',         require('./routes/ues'));
-app.use('/api/evenements',  require('./routes/evenements'));
-app.use('/api/notes',       require('./routes/notes'));
-app.use('/api/discussions', require('./routes/discussions'));
-app.use('/api/annees',      require('./routes/annees'));
-app.use('/api/niveaux',     require('./routes/niveaux'));
+app.use('/api/auth',             require('./routes/auth'));
+app.use('/api/facultes',         require('./routes/facultes'));
+app.use('/api/filieres',         require('./routes/filieres'));
+app.use('/api/etudiants',        require('./routes/etudiants'));
+app.use('/api/ues',              require('./routes/ues'));
+app.use('/api/evenements',       require('./routes/evenements'));
+app.use('/api/notes',            require('./routes/notes'));
+app.use('/api/discussions',      require('./routes/discussions'));
+app.use('/api/annees',           require('./routes/annees'));
+app.use('/api/niveaux',          require('./routes/niveaux'));
+app.use('/api/cours-documents',  require('./routes/cours_documents'));
+app.use('/api/competences',      require('./routes/competences'));
+app.use('/api/messagerie',       require('./routes/messagerie'));
 
 // Route de test
 app.get('/api/health', (req, res) => {
@@ -61,10 +64,6 @@ app.get('/api/health', (req, res) => {
 });
 
 const errorHandler = require('./middleware/errorHandler');
-
-// ============================================
-// GESTION ERREURS GLOBALES
-// ============================================
 app.use(errorHandler);
 
 app.use((req, res) => {
@@ -81,7 +80,11 @@ io.on('connection', (socket) => {
   socket.on('join_room', ({ filiere_id, niveau_id }) => {
     const room = `filiere_${filiere_id}_niveau_${niveau_id}`;
     socket.join(room);
-    console.log(`📚 Socket ${socket.id} rejoint la room: ${room}`);
+  });
+
+  // Rejoindre room personnelle (pour messages privés)
+  socket.on('join_user_room', ({ user_id }) => {
+    socket.join(`user_${user_id}`);
   });
 
   // Rejoindre toutes les filières d'un prof
@@ -91,10 +94,71 @@ io.on('connection', (socket) => {
     });
   });
 
+  // Typing indicator pour messagerie
+  socket.on('typing', ({ to_user_id, from_name }) => {
+    io.to(`user_${to_user_id}`).emit('user_typing', { from_name });
+  });
+
   socket.on('disconnect', () => {
     console.log(`🔌 Utilisateur déconnecté: ${socket.id}`);
   });
 });
+
+// ============================================
+// CRON JOB — Suppression des comptes expirés
+// Vérifie chaque jour à minuit
+// ============================================
+const pool = require('./config/db');
+
+async function supprimerComptesExpires() {
+  try {
+    // Trouver les users dont l'année scolaire est terminée depuis plus de 30 jours
+    const result = await pool.query(
+      `SELECT u.id, u.nom, u.prenom, u.email FROM users u
+       JOIN annees_scolaires a ON u.annee_scolaire_id = a.id
+       WHERE u.rang != 'professeur'
+         AND a.active = FALSE
+         AND a.date_fin < NOW() - INTERVAL '30 days'
+         AND u.actif = TRUE`
+    );
+
+    if (result.rows.length > 0) {
+      console.log(`🗑️  Suppression de ${result.rows.length} compte(s) expirés...`);
+      
+      for (const user of result.rows) {
+        // Désactiver d'abord (soft delete)
+        await pool.query(
+          'UPDATE users SET actif = FALSE WHERE id = $1',
+          [user.id]
+        );
+        console.log(`  ✓ Compte désactivé: ${user.prenom} ${user.nom} (${user.email})`);
+      }
+    }
+
+    // Supprimer complètement les comptes désactivés depuis plus de 60 jours
+    const deleted = await pool.query(
+      `DELETE FROM users 
+       WHERE actif = FALSE 
+         AND annee_scolaire_id IN (
+           SELECT id FROM annees_scolaires 
+           WHERE active = FALSE AND date_fin < NOW() - INTERVAL '60 days'
+         )
+         AND rang != 'professeur'
+       RETURNING nom, prenom, email`
+    );
+
+    if (deleted.rows.length > 0) {
+      console.log(`🗑️  ${deleted.rows.length} compte(s) définitivement supprimés`);
+    }
+  } catch (err) {
+    console.error('Erreur cron suppression comptes:', err);
+  }
+}
+
+// Lancer le cron toutes les 24h
+setInterval(supprimerComptesExpires, 24 * 60 * 60 * 1000);
+// Aussi au démarrage (avec délai de 5 sec)
+setTimeout(supprimerComptesExpires, 5000);
 
 // ============================================
 // DÉMARRAGE SERVEUR
