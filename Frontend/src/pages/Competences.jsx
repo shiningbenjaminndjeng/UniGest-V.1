@@ -5,7 +5,7 @@ import api from '../utils/api';
 import toast from 'react-hot-toast';
 import {
   Star, Plus, Trash2, Upload, Link, Phone,
-  Github, Linkedin, Globe, CheckCircle, X,
+  ExternalLink, Globe, CheckCircle, X,
   Edit3, Save, Eye, EyeOff, Award, Zap, BookOpen, Code
 } from 'lucide-react';
 
@@ -215,12 +215,12 @@ export default function Competences() {
                   onChange={e => setForm(f => ({ ...f, email_contact: e.target.value }))} />
               </div>
               <div>
-                <label className="block text-xs mb-1.5 font-semibold" style={{ color: 'var(--c-text-muted)' }}>LinkedIn</label>
+                <label className="block text-xs mb-1.5 font-semibold" style={{ color: 'var(--c-text-muted)' }}>LinkedIn (URL)</label>
                 <input className="input" placeholder="linkedin.com/in/..." value={form.linkedin}
                   onChange={e => setForm(f => ({ ...f, linkedin: e.target.value }))} />
               </div>
               <div>
-                <label className="block text-xs mb-1.5 font-semibold" style={{ color: 'var(--c-text-muted)' }}>GitHub</label>
+                <label className="block text-xs mb-1.5 font-semibold" style={{ color: 'var(--c-text-muted)' }}>GitHub (URL)</label>
                 <input className="input" placeholder="github.com/..." value={form.github}
                   onChange={e => setForm(f => ({ ...f, github: e.target.value }))} />
               </div>
@@ -325,7 +325,7 @@ export default function Competences() {
                     target="_blank" rel="noopener noreferrer"
                     className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-medium"
                     style={{ background: 'rgba(10,102,194,0.15)', color: '#0a66c2' }}>
-                    <Linkedin size={12} /> LinkedIn
+                    <ExternalLink size={12} /> LinkedIn
                   </a>
                 )}
                 {comp.github && (
@@ -333,7 +333,7 @@ export default function Competences() {
                     target="_blank" rel="noopener noreferrer"
                     className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-medium"
                     style={{ background: 'var(--c-surface2)', color: 'var(--c-text)' }}>
-                    <Github size={12} /> GitHub
+                    <ExternalLink size={12} /> GitHub
                   </a>
                 )}
                 {comp.portfolio && (

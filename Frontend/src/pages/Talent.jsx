@@ -4,8 +4,8 @@ import { useAuth } from '../contexts/AuthContext';
 import api from '../utils/api';
 import toast from 'react-hot-toast';
 import {
-  Search, Star, Phone, Mail, Github, Linkedin, Globe,
-  Zap, Award, BookOpen, Code, Users, Trophy, ChevronRight,
+  Search, Star, Phone, Mail, ExternalLink, Globe,
+  Zap, Award, BookOpen, Code, Users, Trophy,
   MessageSquare
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -47,14 +47,13 @@ function TalentCard({ comp, onRate, onMessage, currentUserId }) {
     if (isMe) return toast.error('Vous ne pouvez pas vous noter vous-même');
     setRating(true);
     try {
-      const r = await onRate(comp.user_id, note);
+      await onRate(comp.user_id, note);
       setMyRating(note);
       toast.success(`Note ${note}/5 envoyée !`);
     } catch {}
     finally { setRating(false); }
   };
 
-  // Couleur de bannière dynamique basée sur le rang
   const bannerBg = comp.banniere_url
     ? `url(${comp.banniere_url}) center/cover`
     : comp.rang === 'delegue'
@@ -110,7 +109,7 @@ function TalentCard({ comp, onRate, onMessage, currentUserId }) {
         {techSkills.length > 0 && (
           <div className="flex flex-wrap gap-1.5 mb-3">
             {techSkills.map(s => (
-              <span key={s.id} className={`skill-tag skill-tag-tech text-xs`}>{s.libelle}</span>
+              <span key={s.id} className="skill-tag skill-tag-tech text-xs">{s.libelle}</span>
             ))}
           </div>
         )}
@@ -126,7 +125,7 @@ function TalentCard({ comp, onRate, onMessage, currentUserId }) {
         {expanded && (
           <div className="space-y-3 fade-in">
             {comp.bio && <p className="text-xs leading-relaxed" style={{ color: 'var(--c-text-muted)' }}>{comp.bio}</p>}
-            
+
             {otherSkills.length > 0 && (
               <div className="flex flex-wrap gap-1.5">
                 {otherSkills.map(s => {
@@ -157,7 +156,7 @@ function TalentCard({ comp, onRate, onMessage, currentUserId }) {
                   target="_blank" rel="noopener noreferrer"
                   className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs"
                   style={{ background: 'var(--c-surface2)', color: 'var(--c-text)' }}>
-                  <Github size={10} /> GitHub
+                  <ExternalLink size={10} /> GitHub
                 </a>
               )}
               {comp.portfolio && (
@@ -227,7 +226,6 @@ export default function Talent() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [filtreType, setFiltreType] = useState('tous');
-  const [view, setView] = useState('grille'); // grille | top
 
   const fetchComps = async () => {
     try {
@@ -302,7 +300,7 @@ export default function Talent() {
             placeholder="Chercher une compétence, un nom..."
             value={search} onChange={e => setSearch(e.target.value)} />
         </div>
-        <div className="flex gap-1.5">
+        <div className="flex gap-1.5 flex-wrap">
           <button onClick={() => setFiltreType('tous')} className={`tab text-xs ${filtreType === 'tous' ? 'active' : ''}`}>
             Tous
           </button>
