@@ -1,4 +1,4 @@
-// src/pages/Cours.jsx — Cours & UE responsive mobile
+// src/pages/Cours.jsx — Cours & UE + consultation des inscrits par UE
 import { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../utils/api';
@@ -6,7 +6,8 @@ import toast from 'react-hot-toast';
 import {
   Plus, Trash2, BookOpen, CheckCircle, XCircle,
   Users, Upload, FileText, File, Image, Download,
-  ChevronDown, ChevronUp, X,
+  ChevronDown, ChevronUp, X, Eye, Mail, Calendar,
+  GraduationCap, Award,
 } from 'lucide-react';
 
 const FILE_ICON = (type) => {
@@ -23,6 +24,193 @@ const formatBytes = (bytes) => {
   return (bytes / 1048576).toFixed(1) + ' MB';
 };
 
+// ── Modal: Étudiants inscrits à une UE ──
+function EtudiantsUEModal({ ue, onClose }) {
+  const [etudiants, setEtudiants] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+
+  useEffect(() => {
+    api.get(`/ues/${ue.id}/etudiants`)
+      .then(r => setEtudiants(r.data.etudiants || []))
+      .catch(() => toast.error('Erreur chargement des inscrits'))
+      .finally(() => setLoading(false));
+  }, [ue.id]);
+
+  const filtered = etudiants.filter(e =>
+    `${e.nom} ${e.prenom} ${e.matricule || ''} ${e.email || ''}`
+      .toLowerCase().includes(search.toLowerCase())
+  );
+
+  const nbDelegues  = etudiants.filter(e => e.rang === 'delegue').length;
+  const nbEtudiants = etudiants.filter(e => e.rang === 'etudiant').length;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 md:p-6"
+      style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(6px)' }}
+      onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="w-full max-w-lg fade-in flex flex-col"
+        style={{
+          background: 'var(--c-surface)',
+          borderRadius: '20px',
+          border: '1px solid var(--c-border)',
+          boxShadow: '0 25px 60px rgba(0,0,0,0.6)',
+          maxHeight: '85vh',
+        }}>
+
+        {/* Header */}
+        <div className="p-4 border-b flex-shrink-0" style={{ borderColor: 'var(--c-border)' }}>
+          <div className="flex items-start justify-between gap-3 mb-3">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-xs px-2 py-0.5 rounded-lg font-bold"
+                  style={{ background: 'rgba(79,142,247,0.15)', color: 'var(--c-primary)', fontFamily: 'JetBrains Mono, monospace' }}>
+                  {ue.code}
+                </span>
+                <span className="text-xs px-2 py-0.5 rounded-lg"
+                  style={{ background: 'var(--c-surface2)', color: 'var(--c-text-muted)' }}>
+                  Sem. {ue.semestre}
+                </span>
+              </div>
+              <h3 className="font-black text-base mt-1 truncate"
+                style={{ color: 'var(--c-text)', fontFamily: 'Outfit, sans-serif' }}>
+                {ue.nom}
+              </h3>
+            </div>
+            <button onClick={onClose}
+              className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0"
+              style={{ background: 'var(--c-surface2)', color: 'var(--c-text-muted)' }}>
+              <X size={16} />
+            </button>
+          </div>
+
+          {/* Stats */}
+          <div className="grid grid-cols-3 gap-2">
+            {[
+              { label: 'Total', value: etudiants.length, color: 'var(--c-primary)', icon: Users },
+              { label: 'Étudiants', value: nbEtudiants, color: 'var(--c-text)', icon: GraduationCap },
+              { label: 'Délégués', value: nbDelegues, color: 'var(--c-delegue)', icon: Award },
+            ].map(({ label, value, color, icon: Icon }) => (
+              <div key={label} className="text-center p-2 rounded-xl" style={{ background: 'var(--c-surface2)' }}>
+                <Icon size={14} className="mx-auto mb-1" style={{ color }} />
+                <p className="text-lg font-black leading-none"
+                  style={{ color, fontFamily: 'Outfit, sans-serif' }}>
+                  {loading ? '…' : value}
+                </p>
+                <p className="text-xs mt-0.5" style={{ color: 'var(--c-text-muted)' }}>{label}</p>
+              </div>
+            ))}
+          </div>
+
+          {!loading && etudiants.length > 4 && (
+            <div className="relative mt-3">
+              <input className="input text-xs" placeholder="Filtrer par nom, matricule, email..."
+                value={search} onChange={e => setSearch(e.target.value)}
+                style={{ height: '38px' }} />
+            </div>
+          )}
+        </div>
+
+        {/* Liste */}
+        <div className="flex-1 overflow-y-auto p-3 space-y-2">
+          {loading ? (
+            [1,2,3].map(i => <div key={i} className="shimmer h-16 rounded-xl" />)
+          ) : filtered.length === 0 ? (
+            <div className="text-center py-8">
+              <Users size={36} className="mx-auto mb-2" style={{ color: 'var(--c-text-dim)' }} />
+              <p className="text-sm" style={{ color: 'var(--c-text-muted)' }}>
+                {search ? 'Aucun résultat' : 'Aucun étudiant inscrit à cette UE'}
+              </p>
+            </div>
+          ) : (
+            filtered.map((etudiant, idx) => (
+              <div key={etudiant.id} className="p-3 rounded-xl border"
+                style={{
+                  background: idx % 2 === 0 ? 'var(--c-surface2)' : 'transparent',
+                  borderColor: 'var(--c-border)',
+                }}>
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm flex-shrink-0"
+                    style={{
+                      background: etudiant.rang === 'delegue' ? 'rgba(168,85,247,0.15)' : 'rgba(79,142,247,0.15)',
+                      color: etudiant.rang === 'delegue' ? 'var(--c-delegue)' : 'var(--c-primary)',
+                      fontFamily: 'Outfit, sans-serif',
+                    }}>
+                    {etudiant.prenom?.[0]}{etudiant.nom?.[0]}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="font-semibold text-sm truncate" style={{ color: 'var(--c-text)' }}>
+                        {etudiant.prenom} {etudiant.nom}
+                      </span>
+                      {etudiant.rang === 'delegue' && <span>🏛️</span>}
+                      <span className={`badge text-[9px] flex-shrink-0 ${etudiant.rang === 'delegue' ? 'badge-delegue' : 'badge-etudiant'}`}>
+                        {etudiant.rang}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                      {etudiant.matricule && (
+                        <span className="text-xs"
+                          style={{ color: 'var(--c-text-muted)', fontFamily: 'JetBrains Mono, monospace' }}>
+                          {etudiant.matricule}
+                        </span>
+                      )}
+                      {etudiant.niveau_code && (
+                        <span className="text-xs px-1.5 py-0.5 rounded"
+                          style={{ background: 'rgba(79,142,247,0.1)', color: 'var(--c-primary)', fontSize: 10 }}>
+                          {etudiant.niveau_code}
+                        </span>
+                      )}
+                    </div>
+                    {etudiant.email && (
+                      <p className="text-xs truncate mt-0.5" style={{ color: 'var(--c-text-muted)' }}>
+                        {etudiant.email}
+                      </p>
+                    )}
+                    {etudiant.date_naissance && (
+                      <p className="text-xs" style={{ color: 'var(--c-text-dim)' }}>
+                        {new Date(etudiant.date_naissance).toLocaleDateString('fr-FR')}
+                        {etudiant.lieu_naissance && ` · ${etudiant.lieu_naissance}`}
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                    {etudiant.email && (
+                      <a href={`mailto:${etudiant.email}`}
+                        className="w-8 h-8 rounded-lg flex items-center justify-center"
+                        title={etudiant.email}
+                        style={{ background: 'rgba(79,142,247,0.1)', color: 'var(--c-primary)' }}>
+                        <Mail size={13} />
+                      </a>
+                    )}
+                    {etudiant.date_naissance && (
+                      <div className="w-8 h-8 rounded-lg flex items-center justify-center"
+                        title={`Né(e) le ${new Date(etudiant.date_naissance).toLocaleDateString('fr-FR')}`}
+                        style={{ background: 'var(--c-surface3)', color: 'var(--c-text-muted)' }}>
+                        <Calendar size={13} />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="p-3 border-t flex-shrink-0" style={{ borderColor: 'var(--c-border)' }}>
+          <p className="text-xs text-center" style={{ color: 'var(--c-text-dim)' }}>
+            {filtered.length !== etudiants.length
+              ? `${filtered.length} / ${etudiants.length} affichés`
+              : `${etudiants.length} inscrit(s) au total`}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Section documents ──
 function DocumentsSection({ ue, user, canDelete }) {
   const [docs, setDocs] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -54,7 +242,8 @@ function DocumentsSection({ ue, user, canDelete }) {
       toast.success('Document partagé !');
       setShowUpload(false); setForm({ titre: '' }); setFichier(null);
       fetchDocs();
-    } catch (err) { toast.error(err.response?.data?.message || 'Erreur upload');
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Erreur upload');
     } finally { setUploading(false); }
   };
 
@@ -66,7 +255,8 @@ function DocumentsSection({ ue, user, canDelete }) {
   return (
     <div className="mt-3 pt-3 border-t" style={{ borderColor: 'var(--c-border)' }}>
       <div className="flex items-center justify-between mb-2">
-        <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--c-text-muted)' }}>
+        <span className="text-xs font-semibold uppercase tracking-wide"
+          style={{ color: 'var(--c-text-muted)' }}>
           📁 Documents ({docs.length})
         </span>
         <button onClick={() => setShowUpload(!showUpload)}
@@ -77,7 +267,8 @@ function DocumentsSection({ ue, user, canDelete }) {
       </div>
 
       {showUpload && (
-        <form onSubmit={handleUpload} className="mb-2 p-3 rounded-xl border fade-in space-y-2"
+        <form onSubmit={handleUpload}
+          className="mb-2 p-3 rounded-xl border fade-in space-y-2"
           style={{ background: 'var(--c-surface2)', borderColor: 'var(--c-border)' }}>
           <div className="flex gap-2">
             <input className="input text-xs flex-1" placeholder="Titre *"
@@ -122,12 +313,14 @@ function DocumentsSection({ ue, user, canDelete }) {
               </div>
               <div className="flex items-center gap-1 flex-shrink-0">
                 <a href={doc.fichier_url} target="_blank" rel="noopener noreferrer" download
-                  className="p-1.5 rounded-lg" style={{ color: 'var(--c-primary)', background: 'rgba(79,142,247,0.1)' }}>
+                  className="p-1.5 rounded-lg"
+                  style={{ color: 'var(--c-primary)', background: 'rgba(79,142,247,0.1)' }}>
                   <Download size={13} />
                 </a>
                 {(doc.created_by === user.id || canDelete) && (
                   <button onClick={() => handleDelete(doc.id)}
-                    className="p-1.5 rounded-lg" style={{ color: 'var(--c-danger)', background: 'var(--c-danger-glow)' }}>
+                    className="p-1.5 rounded-lg"
+                    style={{ color: 'var(--c-danger)', background: 'var(--c-danger-glow)' }}>
                     <Trash2 size={13} />
                   </button>
                 )}
@@ -140,6 +333,7 @@ function DocumentsSection({ ue, user, canDelete }) {
   );
 }
 
+// ── Page principale ──
 export default function Cours() {
   const { user, isDelegue, isProf } = useAuth();
   const [ues, setUes] = useState({ semestre1: [], semestre2: [] });
@@ -147,6 +341,7 @@ export default function Cours() {
   const [semestre, setSemestre] = useState(1);
   const [showForm, setShowForm] = useState(false);
   const [expandedUes, setExpandedUes] = useState({});
+  const [selectedUeForInscrits, setSelectedUeForInscrits] = useState(null);
   const [form, setForm] = useState({ code: '', nom: '', description: '', credits: 3, semestre: 1 });
 
   const fetchUes = async () => {
@@ -163,8 +358,13 @@ export default function Cours() {
 
   const handleInscrire = async (ueId, estInscrit) => {
     try {
-      if (estInscrit) { await api.delete(`/ues/${ueId}/desinscrire`); toast.success('Désinscription réussie'); }
-      else            { await api.post(`/ues/${ueId}/inscrire`);      toast.success('Inscrit !'); }
+      if (estInscrit) {
+        await api.delete(`/ues/${ueId}/desinscrire`);
+        toast.success('Désinscription réussie');
+      } else {
+        await api.post(`/ues/${ueId}/inscrire`);
+        toast.success('Inscrit !');
+      }
       fetchUes();
     } catch (err) { toast.error(err.response?.data?.message || 'Erreur'); }
   };
@@ -197,7 +397,6 @@ export default function Cours() {
   return (
     <div className="space-y-4 md:space-y-6 fade-in">
 
-      {/* Header */}
       <div className="flex items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl md:text-3xl gradient-text">Cours & UE</h1>
@@ -206,18 +405,22 @@ export default function Cours() {
           </p>
         </div>
         {isDelegue() && (
-          <button onClick={() => setShowForm(!showForm)} className="btn-primary flex items-center gap-1.5 text-sm px-4 py-2">
-            <Plus size={15} /> <span className="hidden sm:inline">Ajouter UE</span><span className="sm:hidden">UE</span>
+          <button onClick={() => setShowForm(!showForm)}
+            className="btn-primary flex items-center gap-1.5 text-sm px-4 py-2">
+            <Plus size={15} />
+            <span className="hidden sm:inline">Ajouter UE</span>
+            <span className="sm:hidden">UE</span>
           </button>
         )}
       </div>
 
-      {/* Formulaire création UE */}
       {showForm && isDelegue() && (
         <div className="card fade-in">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-bold text-sm md:text-base">Nouvelle UE</h3>
-            <button onClick={() => setShowForm(false)}><X size={18} style={{ color: 'var(--c-text-muted)' }} /></button>
+            <button onClick={() => setShowForm(false)}>
+              <X size={18} style={{ color: 'var(--c-text-muted)' }} />
+            </button>
           </div>
           <form onSubmit={handleCreate} className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
@@ -244,7 +447,8 @@ export default function Cours() {
               <div>
                 <label className="block text-xs mb-1" style={{ color: 'var(--c-text-muted)' }}>Description</label>
                 <input className="input text-sm" placeholder="Description..."
-                  value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} />
+                  value={form.description}
+                  onChange={e => setForm(f => ({ ...f, description: e.target.value }))} />
               </div>
               <div>
                 <label className="block text-xs mb-1" style={{ color: 'var(--c-text-muted)' }}>Crédits</label>
@@ -260,19 +464,19 @@ export default function Cours() {
         </div>
       )}
 
-      {/* Onglets semestres scrollables */}
       <div className="tabs-scroll">
         {[1, 2].map(s => (
-          <button key={s} onClick={() => setSemestre(s)} className={`tab flex-shrink-0 ${semestre === s ? 'active' : ''}`}>
+          <button key={s} onClick={() => setSemestre(s)}
+            className={`tab flex-shrink-0 ${semestre === s ? 'active' : ''}`}>
             Semestre {s}
-            <span className="ml-1.5 px-1.5 py-0.5 rounded-md text-xs" style={{ background: 'var(--c-surface2)' }}>
+            <span className="ml-1.5 px-1.5 py-0.5 rounded-md text-xs"
+              style={{ background: 'var(--c-surface2)' }}>
               {s === 1 ? ues.semestre1.length : ues.semestre2.length}
             </span>
           </button>
         ))}
       </div>
 
-      {/* Liste des UE */}
       {loading ? (
         <div className="space-y-3">
           {[1,2,3].map(i => <div key={i} className="shimmer h-24 rounded-2xl" />)}
@@ -287,7 +491,6 @@ export default function Cours() {
           {currentUes.map(ue => (
             <div key={ue.id} className="card-hover" style={{ padding: '1rem' }}>
               <div className="flex items-start gap-3">
-                {/* Code badge */}
                 <div className="flex-shrink-0 w-12 h-12 rounded-xl flex items-center justify-center text-xs font-bold leading-tight text-center"
                   style={{ background: 'rgba(79,142,247,0.12)', color: 'var(--c-primary)', fontFamily: 'JetBrains Mono, monospace' }}>
                   {ue.code}
@@ -297,7 +500,9 @@ export default function Cours() {
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1.5 flex-wrap">
-                        <h3 className="font-bold text-sm truncate" style={{ color: 'var(--c-text)' }}>{ue.nom}</h3>
+                        <h3 className="font-bold text-sm truncate" style={{ color: 'var(--c-text)' }}>
+                          {ue.nom}
+                        </h3>
                         <span className="text-xs px-1.5 py-0.5 rounded-lg flex-shrink-0"
                           style={{ background: 'var(--c-surface2)', color: 'var(--c-text-muted)' }}>
                           {ue.credits} cr.
@@ -309,18 +514,38 @@ export default function Cours() {
                           </span>
                         )}
                       </div>
-                      <div className="flex items-center gap-3 mt-1 text-xs flex-wrap" style={{ color: 'var(--c-text-muted)' }}>
-                        <span className="flex items-center gap-1"><Users size={10} /> {ue.nb_inscrits}</span>
+                      <div className="flex items-center gap-3 mt-1 text-xs flex-wrap"
+                        style={{ color: 'var(--c-text-muted)' }}>
+                        {/* Compteur cliquable → ouvre la modal */}
+                        <button onClick={() => setSelectedUeForInscrits(ue)}
+                          className="flex items-center gap-1 transition-colors"
+                          style={{ color: parseInt(ue.nb_inscrits) > 0 ? 'var(--c-primary)' : 'var(--c-text-muted)' }}
+                          title="Voir les étudiants inscrits">
+                          <Users size={10} />
+                          <span className="font-semibold">{ue.nb_inscrits}</span>
+                          <span className="underline underline-offset-2 hidden sm:inline">inscrit(s)</span>
+                        </button>
                         {ue.professeurs?.length > 0 && (
-                          <span className="truncate">👨‍🏫 {ue.professeurs.map(p => p.prenom).join(', ')}</span>
+                          <span className="truncate">
+                            👨‍🏫 {ue.professeurs.map(p => p.prenom).join(', ')}
+                          </span>
                         )}
                       </div>
                     </div>
 
-                    {/* Actions */}
                     <div className="flex items-center gap-1.5 flex-shrink-0">
+                      {/* Bouton 👁️ voir inscrits */}
+                      <button onClick={() => setSelectedUeForInscrits(ue)}
+                        className="p-2 rounded-xl"
+                        style={{ background: 'rgba(79,142,247,0.08)', color: 'var(--c-primary)' }}
+                        title="Voir les inscrits">
+                        <Eye size={14} />
+                      </button>
+
+                      {/* Expand/collapse documents */}
                       <button onClick={() => toggleExpand(ue.id)}
-                        className="p-2 rounded-xl" style={{ background: 'var(--c-surface2)', color: 'var(--c-text-muted)' }}>
+                        className="p-2 rounded-xl"
+                        style={{ background: 'var(--c-surface2)', color: 'var(--c-text-muted)' }}>
                         {expandedUes[ue.id] ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                       </button>
 
@@ -332,7 +557,9 @@ export default function Cours() {
                             color:      ue.est_inscrit ? 'var(--c-success)'       : 'var(--c-primary)',
                           }}>
                           {ue.est_inscrit ? <CheckCircle size={12} /> : <XCircle size={12} />}
-                          <span className="hidden sm:inline">{ue.est_inscrit ? 'Inscrit' : "S'inscrire"}</span>
+                          <span className="hidden sm:inline">
+                            {ue.est_inscrit ? 'Inscrit' : "S'inscrire"}
+                          </span>
                         </button>
                       )}
 
@@ -361,6 +588,14 @@ export default function Cours() {
             </div>
           ))}
         </div>
+      )}
+
+      {/* Modal inscrits */}
+      {selectedUeForInscrits && (
+        <EtudiantsUEModal
+          ue={selectedUeForInscrits}
+          onClose={() => setSelectedUeForInscrits(null)}
+        />
       )}
     </div>
   );

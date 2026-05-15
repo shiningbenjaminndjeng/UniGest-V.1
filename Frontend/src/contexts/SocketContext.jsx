@@ -1,5 +1,5 @@
-// src/contexts/SocketContext.jsx — Notifications temps réel améliorées
-import { createContext, useContext, useEffect, useState, useRef } from 'react';
+// src/contexts/SocketContext.jsx — Notifications temps réel + sync compétences
+import { createContext, useContext, useEffect, useState, useRef, useCallback } from 'react';
 import { io } from 'socket.io-client';
 import { useAuth } from './AuthContext';
 import toast from 'react-hot-toast';
@@ -11,6 +11,7 @@ export const SocketProvider = ({ children }) => {
   const [socket, setSocket] = useState(null);
   const [notifications, setNotifications] = useState([]);
   const [messagesNonLus, setMessagesNonLus] = useState(0);
+  const competenceListenersRef = useRef(new Set());
   const socketRef = useRef(null);
 
   useEffect(() => {
@@ -20,15 +21,11 @@ export const SocketProvider = ({ children }) => {
     socketRef.current = s;
     setSocket(s);
 
-    // Rejoindre la room de sa filière+niveau
     if (user.filiere_id && user.niveau_id) {
       s.emit('join_room', { filiere_id: user.filiere_id, niveau_id: user.niveau_id });
     }
-
-    // Rejoindre room personnelle (messages privés)
     s.emit('join_user_room', { user_id: user.id });
 
-    // ── Événements ──
     s.on('nouvel_evenement', (data) => {
       toast('📅 ' + data.message, { duration: 5000, icon: '📅' });
       addNotif({ ...data, type: 'evenement', source: 'evenements', time: Date.now() });
@@ -55,7 +52,11 @@ export const SocketProvider = ({ children }) => {
       addNotif({ ...data, type: 'message_prive', source: 'messagerie', time: Date.now() });
     });
 
-    // Charger le nombre de messages non lus au démarrage
+    // ── NOUVEAU: sync temps réel compétences ──
+    s.on('competence_updated', (data) => {
+      competenceListenersRef.current.forEach(cb => cb(data));
+    });
+
     fetch('/api/messagerie/non-lus/count', {
       headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
     })
@@ -63,20 +64,30 @@ export const SocketProvider = ({ children }) => {
       .then(d => { if (d.success) setMessagesNonLus(d.total); })
       .catch(() => {});
 
-    return () => { s.disconnect(); socketRef.current = null; };
+    return () => {
+      s.disconnect();
+      socketRef.current = null;
+    };
   }, [user]);
 
   const addNotif = (notif) => {
-    setNotifications(prev => [{ ...notif, lu: false, id: Date.now() + Math.random() }, ...prev]);
+    setNotifications(prev => [
+      { ...notif, lu: false, id: Date.now() + Math.random() },
+      ...prev
+    ]);
   };
 
-  const marquerLu = (id) => {
+  // Abonnement aux mises à jour de compétences
+  const subscribeToCompetences = useCallback((callback) => {
+    competenceListenersRef.current.add(callback);
+    return () => competenceListenersRef.current.delete(callback);
+  }, []);
+
+  const marquerLu = (id) =>
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, lu: true } : n));
-  };
 
-  const marquerTousLus = () => {
+  const marquerTousLus = () =>
     setNotifications(prev => prev.map(n => ({ ...n, lu: true })));
-  };
 
   const resetMessagesNonLus = () => setMessagesNonLus(0);
 
@@ -90,7 +101,8 @@ export const SocketProvider = ({ children }) => {
       marquerTousLus,
       nbNonLu,
       messagesNonLus,
-      resetMessagesNonLus
+      resetMessagesNonLus,
+      subscribeToCompetences,
     }}>
       {children}
     </SocketContext.Provider>

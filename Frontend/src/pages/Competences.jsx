@@ -191,7 +191,7 @@ export default function Competences() {
                   {user?.prenom?.[0]}{user?.nom?.[0]}
                 </div>
                 <div className="flex-1 pb-0.5">
-                  <h2 className="text-lg font-black truncate" style={{ color: 'var(--c-text)', fontFamily: 'Outfit, sans-serif' }}>{user?.prenom} {user?.nom}</h2>
+                  <h2 className="text-lg font-black leading-tight" style={{ color: 'var(--c-text)', fontFamily: 'Outfit, sans-serif', wordBreak: 'break-word' }}>{user?.prenom} {user?.nom}</h2>
                   {comp.titre && <p className="text-xs" style={{ color: 'var(--c-text-muted)' }}>{comp.titre}</p>}
                 </div>
                 <div className="pb-0.5">
