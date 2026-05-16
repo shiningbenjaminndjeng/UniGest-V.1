@@ -23,17 +23,26 @@ createFolders();
 // Configuration du stockage
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    const type = req.baseUrl.includes('notes') ? 'notes' 
-               : req.baseUrl.includes('evenements') ? 'evenements'
-               : req.baseUrl.includes('discussions') ? 'discussions'
-               : 'photos';
-    cb(null, `uploads/${type}`);
+    // Utiliser req.originalUrl (chemin complet) pour une détection fiable
+    const url = (req.originalUrl || req.baseUrl || '').toLowerCase();
+    let folder = 'photos'; // défaut
+    if (url.includes('cours-documents') || url.includes('cours_documents') || url.includes('notes')) {
+      folder = 'notes';
+    } else if (url.includes('evenements')) {
+      folder = 'evenements';
+    } else if (url.includes('discussions')) {
+      folder = 'discussions';
+    }
+    const dest = path.join(__dirname, '..', 'uploads', folder);
+    // Créer le dossier s'il n'existe pas encore
+    if (!fs.existsSync(dest)) fs.mkdirSync(dest, { recursive: true });
+    cb(null, dest);
   },
   filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname);
-    const uniqueName = `${uuidv4()}${ext}`;
-    cb(null, uniqueName);
-  }
+    // ✅ Toujours conserver l'extension d'origine
+    const ext = path.extname(file.originalname) || '';
+    cb(null, `${uuidv4()}${ext}`);
+  },
 });
 
 // Filtres de types de fichiers

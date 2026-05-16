@@ -64,11 +64,13 @@ app.get('/api/health', (req, res) => {
 });
 
 const errorHandler = require('./middleware/errorHandler');
-app.use(errorHandler);
 
-app.use((req, res) => {
+// ⚠️ Le 404 doit être AVANT errorHandler mais APRÈS toutes les routes
+app.use((req, res, next) => {
   res.status(404).json({ success: false, message: 'Route non trouvée' });
 });
+
+app.use(errorHandler);
 
 // ============================================
 // SOCKET.IO — Gestion des connexions temps réel

@@ -13,6 +13,18 @@ import {
 } from 'lucide-react';
 
 // ─────────────────────────────────────────────
+// URL de base du backend pour les fichiers statiques
+// ─────────────────────────────────────────────
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+
+// Transforme un chemin relatif /uploads/... en URL absolue
+const fileUrl = (path) => {
+  if (!path) return '';
+  if (path.startsWith('http')) return path; // déjà absolu
+  return `${BACKEND_URL}${path}`;
+};
+
+// ─────────────────────────────────────────────
 // Helpers
 // ─────────────────────────────────────────────
 const FILE_ICON = (type, size = 14) => {
@@ -58,7 +70,7 @@ const FILE_COLOR = {
 // ─────────────────────────────────────────────
 function FileViewerModal({ doc, onClose }) {
   const cat = getFileCategory(doc.fichier_type);
-  const url = doc.fichier_url;
+  const url = fileUrl(doc.fichier_url); // ✅ URL absolue vers le backend
 
   useEffect(() => {
     document.body.style.overflow = 'hidden';
@@ -469,7 +481,7 @@ function DocumentsTab({ user, ues, canDelete }) {
                             <span className="hidden sm:inline">Lire</span>
                           </button>
                         )}
-                        <a href={doc.fichier_url} download target="_blank" rel="noopener noreferrer"
+                        <a href={fileUrl(doc.fichier_url)} download target="_blank" rel="noopener noreferrer"
                           className="w-8 h-8 rounded-xl flex items-center justify-center"
                           style={{ background: 'var(--c-surface2)', color: 'var(--c-text-muted)' }}
                           title="Télécharger">
@@ -794,7 +806,7 @@ function DocumentsSection({ ue, user, canDelete }) {
                       <Eye size={13} />
                     </button>
                   )}
-                  <a href={doc.fichier_url} target="_blank" rel="noopener noreferrer" download
+                  <a href={fileUrl(doc.fichier_url)} target="_blank" rel="noopener noreferrer" download
                     className="p-1.5 rounded-lg"
                     style={{ color: 'var(--c-primary)', background: 'rgba(79,142,247,0.1)' }}>
                     <Download size={13} />
