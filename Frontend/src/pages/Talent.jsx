@@ -63,31 +63,37 @@ function TalentCard({ comp, onRate, onMessage, currentUserId }) {
 
   return (
     <div className="talent-card">
+      {/* ── Bannière ── */}
       <div className="banner" style={{ background: bannerBg }}>
-        <div className="absolute inset-0" style={{ background: 'rgba(0,0,0,0.35)' }} />
+        <div className="absolute inset-0" style={{ background: 'rgba(0,0,0,0.45)' }} />
         {comp.disponible && (
           <span className="absolute top-2 right-2 flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-semibold"
             style={{ background: 'rgba(16,217,123,0.9)', color: 'white' }}>
             <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" /> Dispo
           </span>
         )}
-      </div>
-
-      <div className="p-3 pt-0">
-        <div className="flex items-end gap-2 -mt-6 mb-2">
-          <div className="w-12 h-12 rounded-xl flex items-center justify-center font-black text-sm border-2 relative z-10"
-            style={{ background: 'var(--g-primary)', color: 'white', border: '2px solid var(--c-surface)', fontFamily: 'Outfit, sans-serif' }}>
+        {/* ── Nom affiché SUR la bannière, toujours visible ── */}
+        <div className="absolute bottom-0 left-0 right-0 px-3 pb-2 flex items-end gap-2"
+          style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.75) 0%, transparent 100%)' }}>
+          <div className="w-11 h-11 rounded-xl flex items-center justify-center font-black text-sm flex-shrink-0"
+            style={{ background: 'var(--g-primary)', color: 'white', fontFamily: 'Outfit, sans-serif',
+                     boxShadow: '0 2px 8px rgba(0,0,0,0.4)' }}>
             {comp.prenom?.[0]}{comp.nom?.[0]}
           </div>
-          <div className="flex-1 pb-0.5 min-w-0">
-            <p className="font-black text-sm leading-tight truncate"
-              style={{ color: 'var(--c-text)', fontFamily: 'Outfit, sans-serif' }}>
+          <div className="flex-1 min-w-0 pb-0.5">
+            <p className="font-black text-sm leading-snug text-white"
+              style={{ fontFamily: 'Outfit, sans-serif',
+                       textShadow: '0 1px 4px rgba(0,0,0,0.8)',
+                       wordBreak: 'break-word' }}>
               {comp.prenom} {comp.nom}
             </p>
-            <p className="text-xs truncate" style={{ color: 'var(--c-text-muted)' }}>{comp.niveau_code}</p>
+            <p className="text-xs" style={{ color: 'rgba(255,255,255,0.75)' }}>{comp.niveau_code}</p>
           </div>
         </div>
+      </div>
 
+      {/* ── Corps de la carte ── */}
+      <div className="p-3">
         {comp.titre && (
           <p className="text-xs font-semibold mb-1.5 px-2 py-0.5 rounded-lg inline-block"
             style={{ background: 'var(--c-primary-glow2)', color: 'var(--c-primary)' }}>
@@ -241,15 +247,11 @@ export default function Talent() {
     return () => clearTimeout(t);
   }, [search]);
 
-  // ── Abonnement socket temps réel ──
   useEffect(() => {
     if (!subscribeToCompetences) return;
-
     const unsubscribe = subscribeToCompetences((data) => {
       const { competence, user_id, action } = data;
-
       setLastUpdate({ nom: competence?.prenom, time: Date.now() });
-
       setCompetences(prev => {
         const exists = prev.find(c => c.user_id === user_id);
         if (exists) {
@@ -261,17 +263,12 @@ export default function Talent() {
         }
         return prev;
       });
-
       setTimeout(() => setLastUpdate(null), 4000);
     });
-
     return unsubscribe;
   }, [subscribeToCompetences]);
 
-  const handleRate    = async (userId, note) => {
-    const r = await api.post(`/competences/${userId}/rate`, { note });
-    return r.data;
-  };
+  const handleRate    = async (userId, note) => { const r = await api.post(`/competences/${userId}/rate`, { note }); return r.data; };
   const handleMessage = (userId) => navigate(`/messagerie?user=${userId}`);
 
   const filtered = filtreType === 'tous'

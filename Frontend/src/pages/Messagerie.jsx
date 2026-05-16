@@ -372,9 +372,9 @@ export default function Messagerie() {
         <div className="flex flex-col h-full rounded-2xl overflow-hidden border"
           style={{ borderColor: 'var(--c-border)', background: 'var(--c-surface)' }}>
           {mobileView === 'list' || !selectedUser ? (
-            <ConversationList />
+            ConversationList()
           ) : (
-            <ChatView />
+            ChatView()
           )}
         </div>
       </div>
@@ -386,7 +386,7 @@ export default function Messagerie() {
           {/* Sidebar conversations */}
           <div className="flex flex-col border-r flex-shrink-0"
             style={{ width: '300px', background: 'var(--c-surface)', borderColor: 'var(--c-border)' }}>
-            <ConversationList />
+            {ConversationList()}
           </div>
 
           {/* Zone chat */}
@@ -403,7 +403,7 @@ export default function Messagerie() {
                 </p>
               </div>
             ) : (
-              <ChatView />
+              ChatView()
             )}
           </div>
         </div>
