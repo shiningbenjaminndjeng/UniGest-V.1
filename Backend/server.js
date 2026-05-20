@@ -50,7 +50,7 @@ app.use(cors({
 }));
 
 // Gérer les requêtes OPTIONS (preflight)
-app.options('*', cors());
+app.options('/*splat', cors());
 // ============================================
 // ROUTES API
 // ============================================
