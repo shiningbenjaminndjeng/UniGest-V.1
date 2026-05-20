@@ -26,6 +26,9 @@ app.set('io', io);
 // ============================================
 // MIDDLEWARES GLOBAUX
 // ============================================
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use(cors({
   origin: function(origin, callback) {
     // Autoriser les requêtes sans origin (Postman, mobile)
