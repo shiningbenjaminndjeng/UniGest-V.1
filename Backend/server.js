@@ -62,7 +62,8 @@ app.use(cors({
 }));
 
 // Gérer les requêtes OPTIONS (preflight CORS)
-app.options('*', cors());
+// ✅ Express 5 : app.options('*') ne fonctionne plus — le middleware cors() gère déjà le preflight
+// app.options('*', cors()); ← supprimé car incompatible avec path-to-regexp v8 (Express 5)
 
 // ============================================
 // ROUTES API
