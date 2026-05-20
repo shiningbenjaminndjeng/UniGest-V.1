@@ -8,3 +8,13 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: 7d
+      - key: FRONTEND_URL
+        value: https://unigest-55t5.onrender.com  # ← remplacez par votre URL frontend
+      - key: DATABASE_URL
+        sync: false   # valeur saisie manuellement dans le dashboard Render
+      - key: PORT
+        value: 5000
