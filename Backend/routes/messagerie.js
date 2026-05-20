@@ -4,6 +4,45 @@ const router = express.Router();
 const pool = require('../config/db');
 const auth = require('../middleware/auth');
 
+// ✅ CORRECTIF — Routes spécifiques AVANT la route dynamique /:user_id
+// Sinon Express intercepte /non-lus/count et /users/search comme user_id
+
+// GET /api/messagerie/non-lus/count — Compteur de messages non lus
+router.get('/non-lus/count', auth, async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT COUNT(*) as total FROM messages_prives WHERE destinataire_id = $1 AND lu = FALSE',
+      [req.user.id]
+    );
+    res.json({ success: true, total: parseInt(result.rows[0].total) });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// GET /api/messagerie/users/search?q= — Rechercher des utilisateurs
+router.get('/users/search', auth, async (req, res) => {
+  try {
+    const { q } = req.query;
+    if (!q || q.length < 2) return res.json({ success: true, users: [] });
+
+    const result = await pool.query(
+      `SELECT u.id, u.nom, u.prenom, u.rang, n.code as niveau_code, f.nom as filiere_nom
+       FROM users u
+       LEFT JOIN niveaux n ON u.niveau_id = n.id
+       LEFT JOIN filieres f ON u.filiere_id = f.id
+       WHERE u.id != $1 AND u.actif = TRUE
+         AND (u.nom ILIKE $2 OR u.prenom ILIKE $2 OR CONCAT(u.prenom, ' ', u.nom) ILIKE $2)
+       LIMIT 10`,
+      [req.user.id, `%${q}%`]
+    );
+
+    res.json({ success: true, users: result.rows });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
 // GET /api/messagerie/conversations — Liste des conversations
 router.get('/conversations', auth, async (req, res) => {
   try {
@@ -17,7 +56,7 @@ router.get('/conversations', auth, async (req, res) => {
          m.created_at as derniere_activite,
          m.lu,
          m.expediteur_id,
-         (SELECT COUNT(*) FROM messages_prives mp2 
+         (SELECT COUNT(*) FROM messages_prives mp2
           WHERE mp2.destinataire_id = $1 AND mp2.expediteur_id = u.id AND mp2.lu = FALSE) as nb_non_lus
        FROM messages_prives m
        JOIN users u ON (CASE WHEN m.expediteur_id = $1 THEN m.destinataire_id ELSE m.expediteur_id END) = u.id
@@ -28,8 +67,9 @@ router.get('/conversations', auth, async (req, res) => {
       [userId]
     );
 
-    // Trier par dernière activité
-    const convs = result.rows.sort((a, b) => new Date(b.derniere_activite) - new Date(a.derniere_activite));
+    const convs = result.rows.sort(
+      (a, b) => new Date(b.derniere_activite) - new Date(a.derniere_activite)
+    );
     res.json({ success: true, conversations: convs });
   } catch (error) {
     console.error(error);
@@ -44,7 +84,7 @@ router.get('/:user_id', auth, async (req, res) => {
     const me = req.user.id;
 
     const result = await pool.query(
-      `SELECT m.*, 
+      `SELECT m.*,
               u_exp.nom as exp_nom, u_exp.prenom as exp_prenom,
               u_dest.nom as dest_nom, u_dest.prenom as dest_prenom
        FROM messages_prives m
@@ -64,7 +104,6 @@ router.get('/:user_id', auth, async (req, res) => {
       [me, user_id]
     );
 
-    // Infos de l'autre utilisateur
     const otherUser = await pool.query(
       `SELECT u.id, u.nom, u.prenom, u.rang, n.code as niveau_code, f.nom as filiere_nom
        FROM users u
@@ -74,10 +113,10 @@ router.get('/:user_id', auth, async (req, res) => {
       [user_id]
     );
 
-    res.json({ 
-      success: true, 
+    res.json({
+      success: true,
       messages: result.rows,
-      interlocuteur: otherUser.rows[0] || null
+      interlocuteur: otherUser.rows[0] || null,
     });
   } catch (error) {
     console.error(error);
@@ -96,8 +135,10 @@ router.post('/:user_id', auth, async (req, res) => {
       return res.status(400).json({ success: false, message: 'Message vide' });
     }
 
-    // Vérifier que le destinataire existe
-    const dest = await pool.query('SELECT id, nom, prenom FROM users WHERE id = $1 AND actif = TRUE', [user_id]);
+    const dest = await pool.query(
+      'SELECT id, nom, prenom FROM users WHERE id = $1 AND actif = TRUE',
+      [user_id]
+    );
     if (dest.rows.length === 0) {
       return res.status(404).json({ success: false, message: 'Utilisateur introuvable' });
     }
@@ -110,54 +151,17 @@ router.post('/:user_id', auth, async (req, res) => {
 
     const message = result.rows[0];
 
-    // Notification socket au destinataire
     const io = req.app.get('io');
     io.to(`user_${user_id}`).emit('nouveau_message_prive', {
       message: `💌 ${me.prenom} ${me.nom}: ${contenu.substring(0, 50)}`,
       from: { id: me.id, nom: me.nom, prenom: me.prenom },
       msg: message,
-      type: 'message_prive'
+      type: 'message_prive',
     });
 
     res.status(201).json({ success: true, message });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ success: false, message: 'Erreur serveur' });
-  }
-});
-
-// GET /api/messagerie/non-lus/count — Compteur de messages non lus
-router.get('/non-lus/count', auth, async (req, res) => {
-  try {
-    const result = await pool.query(
-      'SELECT COUNT(*) as total FROM messages_prives WHERE destinataire_id = $1 AND lu = FALSE',
-      [req.user.id]
-    );
-    res.json({ success: true, total: parseInt(result.rows[0].total) });
-  } catch (error) {
-    res.status(500).json({ success: false, message: 'Erreur serveur' });
-  }
-});
-
-// GET /api/messagerie/users/search?q= — Rechercher des utilisateurs pour démarrer une conv
-router.get('/users/search', auth, async (req, res) => {
-  try {
-    const { q } = req.query;
-    if (!q || q.length < 2) return res.json({ success: true, users: [] });
-
-    const result = await pool.query(
-      `SELECT u.id, u.nom, u.prenom, u.rang, n.code as niveau_code, f.nom as filiere_nom
-       FROM users u
-       LEFT JOIN niveaux n ON u.niveau_id = n.id
-       LEFT JOIN filieres f ON u.filiere_id = f.id
-       WHERE u.id != $1 AND u.actif = TRUE
-         AND (u.nom ILIKE $2 OR u.prenom ILIKE $2 OR CONCAT(u.prenom, ' ', u.nom) ILIKE $2)
-       LIMIT 10`,
-      [req.user.id, `%${q}%`]
-    );
-
-    res.json({ success: true, users: result.rows });
-  } catch (error) {
     res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 });
